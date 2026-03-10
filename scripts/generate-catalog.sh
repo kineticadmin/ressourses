@@ -7,6 +7,11 @@ REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUNDLE_DIR="$REPO_DIR/Claude Skills Ultimate Bundle"
 OUTPUT="$REPO_DIR/catalog.json"
 
+if [[ ! -d "$BUNDLE_DIR" ]]; then
+  echo "Error: Bundle directory not found: $BUNDLE_DIR" >&2
+  exit 1
+fi
+
 # Blacklisted skill paths (relative to BUNDLE_DIR), no trailing slash
 BLACKLIST=(
   "Legal & Compliance/terms-of-use-app"
@@ -68,12 +73,26 @@ while IFS= read -r -d '' skill_file; do
   description="$(extract_yaml "$frontmatter" "description")"
   allowed_tools_raw="$(extract_yaml "$frontmatter" "allowed-tools")"
 
+  # Escape name and category for JSON
+  name_escaped="${name//\\/\\\\}"
+  name_escaped="${name_escaped//\"/\\\"}"
+  category_escaped="${category//\\/\\\\}"
+  category_escaped="${category_escaped//\"/\\\"}"
+
+  # Skip skills with no name
+  if [[ -z "$name_escaped" ]]; then
+    echo "  [WARN] missing name in $rel_dir — skipping"
+    continue
+  fi
+
   # Build JSON array for allowedTools
   tools_json="["
   first_tool=1
   for tool in $allowed_tools_raw; do
+    tool_escaped="${tool//\\/\\\\}"
+    tool_escaped="${tool_escaped//\"/\\\"}"
     if [[ $first_tool -eq 0 ]]; then tools_json+=", "; fi
-    tools_json+="\"$tool\""
+    tools_json+="\"$tool_escaped\""
     first_tool=0
   done
   tools_json+="]"
@@ -87,7 +106,7 @@ while IFS= read -r -d '' skill_file; do
 
   if [[ $first -eq 0 ]]; then printf ',\n' >> "$OUTPUT"; fi
   printf '  {\n    "name": "%s",\n    "category": "%s",\n    "description": "%s",\n    "path": "%s",\n    "allowedTools": %s\n  }' \
-    "$name" "$category" "$description_escaped" "$rel_path" "$tools_json" >> "$OUTPUT"
+    "$name_escaped" "$category_escaped" "$description_escaped" "$rel_path" "$tools_json" >> "$OUTPUT"
   first=0
 
 done < <(find "$BUNDLE_DIR" -name "SKILL.md" -print0 | sort -z)
