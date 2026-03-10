@@ -214,6 +214,33 @@ cmd_workflow_copy() {
   fi
 }
 
+_kinetic_claude_block() {
+  local MARKER_START="<!-- kinetic-skills:auto-scan -->"
+  local MARKER_END="<!-- end:kinetic-skills:auto-scan -->"
+  printf '%s\n## Kinetic Skills — scan automatique\n\nLe catalogue de skills Claude est installé dans ~/.kinetic/ressourses/catalog.json\n(500+ skills : contenu, SEO, email, sales, legal, HR, analytics, branding, e-commerce...).\n\nAvant de commencer toute mission substantielle (nouvelle feature, rédaction, analyse,\nautomatisation, refactor), tu dois :\n\n1. Lire ~/.kinetic/ressourses/catalog.json\n2. Identifier les skills pertinents pour la mission (chercher dans name et description)\n3. Si un ou plusieurs skills correspondent :\n   - Annoncer brièvement : "Je vois X skill(s) utile(s) : [noms]"\n   - Installer avec kinetic-skills install <nom> sans demander confirmation (sauf si >3 skills)\n   - Invoquer le skill installé\n\nNe pas faire ce scan pour : corrections rapides, questions, explications, modifications mineures.\nSi ~/.kinetic/ressourses/ est absent, ignorer silencieusement.\n%s\n' \
+    "$MARKER_START" "$MARKER_END"
+}
+
+_refresh_claude_md() {
+  local CLAUDE_MD="${HOME}/.claude/CLAUDE.md"
+  local MARKER_START="<!-- kinetic-skills:auto-scan -->"
+  local MARKER_END="<!-- end:kinetic-skills:auto-scan -->"
+
+  mkdir -p "$(dirname "$CLAUDE_MD")"
+  touch "$CLAUDE_MD"
+
+  if grep -qF "$MARKER_START" "$CLAUDE_MD" 2>/dev/null; then
+    # Remove old block between markers (inclusive)
+    local tmp
+    tmp="$(mktemp)"
+    awk "/${MARKER_START//\//\\/}/{skip=1} skip{if(/${MARKER_END//\//\\/}/){skip=0; next}; next} 1" "$CLAUDE_MD" > "$tmp"
+    mv "$tmp" "$CLAUDE_MD"
+  fi
+
+  printf '\n%s' "$(_kinetic_claude_block)" >> "$CLAUDE_MD"
+  ok "Bloc CLAUDE.md mis à jour."
+}
+
 cmd_update() {
   if [[ ! -d "$KINETIC_DIR" ]]; then
     err "Repo local absent : $KINETIC_DIR"
@@ -227,6 +254,8 @@ cmd_update() {
   info "Mise à jour du meta-skill..."
   mkdir -p "${HOME}/.claude/skills/kinetic-skills"
   cp "${KINETIC_DIR}/meta-skill/SKILL.md" "${HOME}/.claude/skills/kinetic-skills/SKILL.md"
+  info "Mise à jour du bloc CLAUDE.md..."
+  _refresh_claude_md
   ok "Mise à jour terminée."
 }
 

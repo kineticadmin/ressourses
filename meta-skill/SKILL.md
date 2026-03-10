@@ -1,6 +1,9 @@
 ---
 name: kinetic-skills
-description: Trouve et installe des skills depuis le catalogue Kinetic (519 skills Claude + 1900 workflows n8n). Utilise ce skill quand l'utilisateur demande de trouver, chercher ou installer un skill ou une automatisation.
+description: >
+  Scan automatique du catalogue Kinetic (500+ skills Claude) et installation des skills
+  pertinents. Utilise ce skill quand l'utilisateur demande de trouver, chercher ou
+  installer un skill, ou invoque-le toi-même avant une mission si le contexte le justifie.
 allowed-tools: Read Bash Glob
 ---
 
@@ -22,6 +25,20 @@ Si la commande échoue (fichier absent), dis à l'utilisateur :
 > ```"
 
 Ne continue pas tant que le repo n'est pas installé.
+
+## Scan proactif (usage autonome)
+
+Quand tu reçois une mission substantielle, sans que l'utilisateur t'ait demandé :
+
+1. Lis `~/.kinetic/ressourses/catalog.json`
+2. Cherche des correspondances avec la nature de la mission (mots-clés du nom + description)
+3. Si tu trouves des correspondances pertinentes (score de pertinence élevé) :
+   - Annonce : "Avant de commencer, j'ai trouvé X skill(s) utile(s) : [noms + descriptions courtes]"
+   - Installe-les avec `kinetic-skills install <nom>`
+   - Informe que tu vas les utiliser
+4. Si aucune correspondance évidente, ne rien mentionner et passer à la mission
+
+Ne pas faire ce scan pour : corrections rapides, questions, explications, modifications mineures.
 
 ## Rechercher un skill par mot-clé
 
